@@ -20,6 +20,7 @@ import json
 import operator
 
 import numpy as np
+import ctypes
 
 from math import sqrt
 
@@ -34,13 +35,22 @@ from scipy.stats import pearsonr
 import os
 import sys
 
-import corr
+import corr1
+import corr2
+import corr3
 
 sys.setrecursionlimit(100000)
 
 global pcc_d
 global cont_pcc
 global cont_unif
+global array_r
+global train_char
+global num_scores
+global index_n
+global label
+global hasha
+global exp_scores
 
 
 creator.create("FitnessMin", base.Fitness, weights=(1.0, 1.0))
@@ -76,7 +86,16 @@ toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
 def corr_pcc(indv):
 
-  pcc = corr.corr_nsga2(np.array(indv))
+  global array_r
+  global train_char
+  global num_scores
+  global label
+  global hasha
+  global index_n
+  global exp_scores
+
+  pcc = corr1.corr_nsga2(np.array(indv), label, train_char, hasha, array_r, exp_scores, index_n)
+
   return pcc, pcc
 
 toolbox.register("evaluate", corr_pcc)
@@ -173,6 +192,7 @@ def main(NGEN, MU, seed=None):
         
 if __name__ == "__main__":
 
+
     # with open("pareto_front/zdt1_front.json") as optimal_front_data:
     #     optimal_front = json.load(optimal_front_data)
     # Use 500 of the 1000 points in the json file
@@ -189,14 +209,17 @@ if __name__ == "__main__":
     cont_pcc = 0
     cont_unif = 0
 
-    pop, stats = main(int(sys.argv[1]), int(sys.argv[2]))
-    j=0
-    #print("pop size: ", len(pop))
-    #for i in pop:
-    #    j+=1
-    #    print("number: ",j, " ", i, "type: ", type(i))
+    array_r = np.zeros((9,20), dtype='f')
 
-    #pop.sort(key=lambda x: x.fitness.values)
+    array_r, label, index_n = corr2.store_nsga2()
+
+    train_char = np.array((index_n,9), dtype='U')
+    hasha = np.array((index_n), dtype='U')
+    exp_scores = np.zeros((8424), dtype='f')
+
+    train_char, hasha, exp_scores = corr3.store_nsga2(index_n) #, hasha, exp_scores
+
+    pop, stats = main(int(sys.argv[1]), int(sys.argv[2]))
     
     print(stats)
     print("--------")
