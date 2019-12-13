@@ -4,29 +4,31 @@
 !    caraortizmah@gmail.com
 !    caraortizmah@unal.edu.co
 
-subroutine store_nsga2(ARRAY_RR, LABEL, index_n)
+subroutine store_nsga2(ARRAY_RR, LABEL, index_n, count_size, train_txt)
   !>
   !Initialization of matrices that depends on the sliding_window function
   !
   implicit none
 
+  integer, intent(in) :: count_size
   integer, intent(out) :: index_n
 
   integer eastat, i, indexn, aux_n
   integer j, k, aux_nn
   character(len=50) aux
+  character(len=50), intent(in) :: train_txt
   character(len=50), dimension(20) :: A
   character(len=50), dimension(2)  :: B
   character(len=50), dimension(10,20) :: ARRAY_R
   real, intent(out), dimension(9,20) :: ARRAY_RR
-  character(len=50), dimension(8424,2) :: TRAIN_SCORES
-  character(len=50), dimension(8424,3) :: TR_SC_HA
+  character(len=50), dimension(count_size,2) :: TRAIN_SCORES!8424
+  character(len=50), dimension(count_size,3) :: TR_SC_HA!8424
   character(len=5),  dimension(20) :: PEP
   character(len=50), allocatable :: TR_SC_HA_N(:,:)
   character(len=50), allocatable :: TRAIN_CHAR(:,:)
   character(len=50), dimension(10) :: aux_xx
   character(len=20), intent(out) :: LABEL
-  real, dimension(8424) :: EXP_SCORES
+  real, dimension(count_size) :: EXP_SCORES!8424
   integer, dimension(20,9) :: AR
   integer, dimension(20,2) :: AA
   integer, dimension(2) :: aux_x
@@ -48,10 +50,10 @@ subroutine store_nsga2(ARRAY_RR, LABEL, index_n)
 
   END DO
 
-  !****matrix training data ****
-  OPEN(11, file='train1_DRB1_0101_e.txt', status='old', action='read', position='rewind')
+  !****matrix training data ****'train1_DRB1_0101_gap.txt'
+  OPEN(11, file=train_txt, status='old', action='read', position='rewind')
 
-  DO i = 1, 8424
+  DO i = 1, count_size!8424
     READ(11,*,iostat=eastat) B
     IF (eastat < 0) THEN
       EXIT
@@ -73,7 +75,7 @@ subroutine store_nsga2(ARRAY_RR, LABEL, index_n)
   indexn = 0 
   !WRITE (*,*) indexn
 
-  DO i = 1, 8424!  for i in tr_sc_ha:
+  DO i = 1, count_size!  for i in tr_sc_ha:!8424
     aux   = TR_SC_HA(i,1)
     aux_n = len(trim(aux))
     IF (aux_n > 9 ) THEN
@@ -85,7 +87,7 @@ subroutine store_nsga2(ARRAY_RR, LABEL, index_n)
   ALLOCATE(TR_SC_HA_N(indexn,3))
 
   index_n = 0
-  DO i = 1, 8424!  for i in tr_sc_ha:
+  DO i = 1, count_size!  for i in tr_sc_ha:8424
     aux   = TR_SC_HA(i,1)
     aux_n = len(trim(aux))
     IF (aux_n > 9 ) THEN
@@ -110,7 +112,7 @@ subroutine store_nsga2(ARRAY_RR, LABEL, index_n)
   ALLOCATE(NUM_SCORES(indexn,9))
   
   !**** secondary matrix assignement ****
-  DO i = 1, 8424 !number of train_scores' rows of the original set
+  DO i = 1, count_size !number of train_scores' rows of the original set 8424
      read(TRAIN_SCORES(i,2),*)EXP_SCORES(i)   !extracting scores of the train_scores vector
      !WRITE (*,*) EXP_SCORES(i)
   END DO

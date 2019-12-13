@@ -51,6 +51,7 @@ global index_n
 global label
 global hasha
 global exp_scores
+global count_size
 
 
 creator.create("FitnessMin", base.Fitness, weights=(1.0, 1.0))
@@ -72,13 +73,14 @@ NDIM = 9
 def uniform(low, up, size=None):
   global cont_unif
 
-  cont_unif+=1
-  if cont_unif<2:
-    return [random.uniform(a, b) for a, b in zip([0.05] * size, [0.05] * size)]
+  #cont_unif+=1
+  #if cont_unif<2:
+  #  return [random.uniform(a, b) for a, b in zip([0.05] * size, [0.05] * size)]
   try:
     return [random.uniform(a, b) for a, b in zip(low, up)]
   except TypeError:
     return [random.uniform(a, b) for a, b in zip([low] * size, [up] * size)]
+  #return [0.9370631828605782, -0.07922944534573004, 0.14037449906309526, 0.7391540126630456, -0.3369918520531541, 0.9310277654325743, 0.25878403543304407, 0.1833097867051305, 0.35002708270663757]
 
 toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
 toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.attr_float)
@@ -93,10 +95,12 @@ def corr_pcc(indv):
   global hasha
   global index_n
   global exp_scores
+  global count_size
 
-  pcc = corr1.corr_nsga2(np.array(indv), label, train_char, hasha, array_r, exp_scores, index_n)
+  #pcc = corr1.corr_nsga2(np.array(indv), label, train_char, hasha, array_r, exp_scores, index_n)
+  pcc, auc = corr1.corr_nsga2(np.array(indv), label, train_char, hasha, array_r, exp_scores, index_n, count_size)
 
-  return pcc, pcc
+  return pcc, auc
 
 toolbox.register("evaluate", corr_pcc)
 toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0)
@@ -147,7 +151,7 @@ def main(NGEN, MU, seed=None):
   j=0
   for i in pop:
     j+=1
-    print(j, ":", i, "PCC=",i.fitness)
+    print(j, ":", i, "PCC, AUC=", i.fitness)
   print("      ")
 
   # Begin the generational process
@@ -182,7 +186,7 @@ def main(NGEN, MU, seed=None):
       j=0
       for i in pop:
         j+=1
-        print(j, ":", i, "PCC=", i.fitness)
+        print(j, ":", i, "PCC, AUC=", i.fitness)
       print("      ")
 
   #print("Final population hypervolume is %f" % hypervolume(pop, [11.0, 11.0]))
@@ -205,19 +209,26 @@ if __name__ == "__main__":
     print("*Number of Generations: ", sys.argv[1])
     print("*Number of Mutations ", sys.argv[2])
 
-    #init()
+    train_txt = 'train1_DRB1_0101_e.txt'
     cont_pcc = 0
     cont_unif = 0
+    if len(sys.argv)>=4:
+      train_txt = sys.argv[3]
+      
+    #elif len(sys.argv)==5:
+    #  matrix_txt = sys.argv[4]
+    #else
+    count_size = len(open(train_txt).readlines())
 
     array_r = np.zeros((9,20), dtype='f')
 
-    array_r, label, index_n = corr2.store_nsga2()
+    array_r, label, index_n = corr2.store_nsga2(count_size, train_txt)
 
     train_char = np.array((index_n,9), dtype='U')
     hasha = np.array((index_n), dtype='U')
-    exp_scores = np.zeros((8424), dtype='f')
+    exp_scores = np.zeros((count_size), dtype='f')
 
-    train_char, hasha, exp_scores = corr3.store_nsga2(index_n) #, hasha, exp_scores
+    train_char, hasha, exp_scores = corr3.store_nsga2(count_size, index_n, train_txt) #, hasha, exp_scores
 
     pop, stats = main(int(sys.argv[1]), int(sys.argv[2]))
     

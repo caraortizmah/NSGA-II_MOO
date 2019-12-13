@@ -61,8 +61,9 @@ def init():
   print("*Initialization of the matrices")
 
   array_r = np.loadtxt('matrix_DR1_label.txt', dtype=str) #matrix data by position and amino acid
-  train_scores = np.loadtxt('train1_DRB1_0101_e.txt', dtype=str)
+  #train_scores = np.loadtxt('train1_DRB1_0101_e.txt', dtype=str)
   #train_scores = np.loadtxt('train_setE.txt', dtype=str)
+  train_scores = np.loadtxt('results_best_weights-GAP1', dtype=str)
   exp_scores=np.ones((train_scores.shape[0]), dtype='f')
   pred_scores=np.ones((train_scores.shape[0]), dtype='f')
 
@@ -255,14 +256,18 @@ def corr_pcc(indv):
   global cont
   global cont_pcc
   global info_1
+  global tr_sc
 
   num_scores=scores_assgn()
   pr_sc=num_scores.dot(np.array(indv))
   #cont=np.column_stack((pr_sc,tr_sc[0:tr_sc.shape[0],2]))
 
   cont=np.column_stack((pr_sc,tr_sc))
-  
+  #print(":",pr_sc[0], tr_sc[0])
+  #print("stacking: ", cont.shape)
+  #print("stacking: ", cont[0])
   info=stacking(cont)
+  #print("info: ", info.shape)
   info_1=np.column_stack((exp_scores,info))
 
   pred_scores=np.array(info[:,0], dtype='float32')
@@ -271,6 +276,69 @@ def corr_pcc(indv):
   pcc_d = pcc[0]
 
   return pcc[0], pcc[0]
+
+def roc():
+
+  global pred_scores
+  global exp_scores
+
+  resol = 150
+
+  tpr = np.zeros((150), dtype='f')
+  fpr = np.zeros((150), dtype='f')
+
+  max_v = 0.0
+  for i in pred_scores:
+    if max_v < i: 
+      max_v = i
+  #print(max_v)
+  min_v = max_v
+  for i in pred_scores:
+    if min_v > i:
+      min_v = i
+  #print(min_v)
+  
+  threshold_exp = 0.426
+
+  diff_max = max_v - min_v
+  diff_min = diff_max / resol
+  threshold_pred = min_v
+  #print(diff_max, diff_min)
+  print(" TPR      FPR")
+  for i in range(resol):
+    
+    threshold_pred = min_v + (diff_min * i)
+    tp = fn = tn = fp = 0.0 
+    #true positives (tp), false negatives (fn), true negatives (tn), false positives (fp)
+
+    for j in range(len(exp_scores)):
+      if exp_scores[j]>threshold_exp: #below of the experimental threshold is negative
+        if pred_scores[j]>threshold_pred: #negative for predicted
+          tn = tn + 1
+        else: #positive for predicted
+          fp = fp + 1
+      else: #above or equal of the experimental threshold is positive
+        if pred_scores[j]>threshold_pred: #negative for predicted
+          fn = fn + 1
+        else: #positive for predicted
+          tp = tp + 1
+    tpr[i] = tp / (tp + fn)
+    fpr[i] = fp / (tn + fp)
+    #print(tp, fn, fp, tn, tpr[i], fpr[i], threshold_pred)
+    #print(tpr[i], fpr[i])
+    #print("% 1.8f  %1.8f  " %(tpr[i], fpr[i]))
+    #print(tpr[i], fpr[i], threshold_pred)
+  
+  auc = 0.0
+  diff_1 = 0.0
+  diff_2 = 0.0
+  for i in range(resol):
+    auc = (fpr[i] - diff_1)*((tpr[i] + diff_2) / 2) + auc #trapezoid area
+    #auc = (fpr[i] - diff_1)*tpr[i] + auc #rectangle area
+    diff_1 = fpr[i]
+    diff_2 = tpr[i]
+
+  return auc
         
 if __name__ == "__main__":
 
@@ -293,16 +361,18 @@ if __name__ == "__main__":
   init()
   #indv = uniform()
   indv = [0.9370631828605782, -0.07922944534573004, 0.14037449906309526, 0.7391540126630456, -0.3369918520531541, 0.9310277654325743, 0.25878403543304407, 0.1833097867051305, 0.35002708270663757]
+  #indv = [1.00, -1.00, -1.00, 1.00, -1.00, 1.00, 1.00, -1.00, 1.00]
   print("Values of the weights:")
   print(indv)
   correl = corr_pcc(indv)
   print("**")
-  print("Experimental binding (Eb), Predicted binding (Pb), core, score")
+  print("Experimental binding (Eb), Predicted binding (Pb), core")
   print("**")
-  print("       Eb                Pb             core       score")
+  print("       Eb                Pb             core")
   #print(info_1[:,0:4])
   for i in info_1:
-    print("% 1.14f  %1.14f   %3s   %1.5f" %(i[0], i[1], i[2], float(i[3])))  
-  
+    print("% 1.14f  %1.14f   %3s " %(i[0], i[1], i[2]))  
   print("PCC: ", correl[0])
+  auc = roc()
+  print("AUC: ", auc)
   print("--------")

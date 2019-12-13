@@ -4,28 +4,30 @@
 !    caraortizmah@gmail.com
 !    caraortizmah@unal.edu.co
 
-subroutine store_nsga2(index_nn, TRAIN_C, HASHA, EXP_SCORES)
+subroutine store_nsga2(count_size, index_nn, train_txt, TRAIN_C, HASHA, EXP_SCORES)
   !>
   !Initialization of matrices that depends on the sliding_window function
   !
   implicit none
 
+  integer, intent(in) :: count_size
   integer, intent(in) :: index_nn
 
   integer eastat, i, aux_n, index_n
   integer j, aux_nn
   character(len=50) aux
+  character(len=50), intent(in) :: train_txt
   character(len=50), dimension(20) :: A
   character(len=50), dimension(2)  :: B
   character(len=50), dimension(10,20) :: ARRAY_R
-  character(len=50), dimension(8424,2) :: TRAIN_SCORES
-  character(len=50), dimension(8424,3) :: TR_SC_HA
+  character(len=50), dimension(count_size,2) :: TRAIN_SCORES
+  character(len=50), dimension(count_size,3) :: TR_SC_HA
   character(len=50), dimension(index_nn,3) :: TR_SC_HA_N
   character*50, dimension(index_nn) :: HASHA
   intent(out) HASHA
   character, dimension(index_nn,9) :: TRAIN_C
   intent(out) TRAIN_C
-  real, intent(out), dimension(8424) :: EXP_SCORES
+  real, intent(out), dimension(count_size) :: EXP_SCORES
 
   !print *, 'Initialization of the matrices'
 
@@ -42,10 +44,10 @@ subroutine store_nsga2(index_nn, TRAIN_C, HASHA, EXP_SCORES)
 
   END DO
 
-  !****matrix training data ****
-  OPEN(11, file='train1_DRB1_0101_e.txt', status='old', action='read', position='rewind')
+  !****matrix training data ****'train1_DRB1_0101_e.txt'
+  OPEN(11, file=train_txt, status='old', action='read', position='rewind')
 
-  DO i = 1, 8424
+  DO i = 1, count_size
     READ(11,*,iostat=eastat) B
     IF (eastat < 0) THEN
       EXIT
@@ -67,7 +69,7 @@ subroutine store_nsga2(index_nn, TRAIN_C, HASHA, EXP_SCORES)
   END DO
 
   index_n = 0
-  DO i = 1, 8424!  for i in tr_sc_ha:
+  DO i = 1, count_size!  for i in tr_sc_ha:
     aux   = TR_SC_HA(i,1)
     aux_n = len(trim(aux))
     IF (aux_n > 9 ) THEN
@@ -92,8 +94,6 @@ subroutine store_nsga2(index_nn, TRAIN_C, HASHA, EXP_SCORES)
       TRAIN_C(i,j) = TR_SC_HA_N(i,1)(j:j)
     END DO
   END DO
-  
-  print*, TRAIN_C(2,2)
 
   HASHA(:) = TR_SC_HA_N(:,3)
 

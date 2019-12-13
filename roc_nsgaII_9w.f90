@@ -14,9 +14,9 @@ Program  roc_nsga2_9w
   
   !real, intent(out) :: corr
 
-  integer eastat, i, indexn, aux_n
+  integer eastat, i, indexn, aux_n, resol
   integer j, k, index_n, aux_nn, tmp_index
-  real tp, fn, tn, fp, auc, diff_1
+  real tp, fn, tn, fp, auc, diff_1, diff_2
   real b_low, b_up, tmp, mean_x, mean_y
   real cov, var_x, var_y, corr
   real min, max, diff_max, diff_min
@@ -34,7 +34,7 @@ Program  roc_nsga2_9w
   real*4 indv(9)
   real, dimension(8424) :: EXP_SCORES
   real, dimension(8424) :: PRED_SCORES
-  real, dimension(100) :: TPR, FPR
+  real, dimension(8424) :: TPR, FPR
   integer, dimension(20,9) :: AR
   integer, dimension(20,2) :: AA
   integer, dimension(2) :: aux_x
@@ -203,15 +203,16 @@ Program  roc_nsga2_9w
   END DO
   WRITE (*, "( 5 f11.6 )" ) indv
   !indv(:) = 1.0
-  indv(1) = 0.3 
-  indv(2) = 0.3 
-  indv(3) = 0.3 
-  indv(4) = 0.3 
-  indv(5) = 0.3 
-  indv(6) = 0.3 
-  indv(7) = 0.3 
-  indv(8) = 0.3 
-  indv(9) = 0.3 
+  !indv(:) = (/ 0.9370631828605782, -0.07922944534573004, 0.14037449906309526, 0.7391540126630456, -0.3369918520531541, 0.9310277654325743, 0.25878403543304407, 0.1833097867051305, 0.35002708270663757 /)
+  indv(1) = 0.9370631828605782 
+  indv(2) = -0.07922944534573004 
+  indv(3) = 0.14037449906309526 
+  indv(4) = 0.7391540126630456 
+  indv(5) = -0.3369918520531541 
+  indv(6) = 0.9310277654325743 
+  indv(7) = 0.25878403543304407 
+  indv(8) = 0.1833097867051305 
+  indv(9) = 0.35002708270663757 
 
   i = 0
   j = 0
@@ -276,39 +277,41 @@ Program  roc_nsga2_9w
   !print*, EXP_SCORES
   max = 0
   DO i = 1, 8423
-    IF (max<EXP_SCORES(i)) max = EXP_SCORES(i)
+    IF (max<PRED_SCORES(i)) max = PRED_SCORES(i)
   END DO
   print *, max
   min = max
   DO i = 1, 8423
-    IF (min>EXP_SCORES(i)) min = EXP_SCORES(i)
+    IF (min>PRED_SCORES(i)) min = PRED_SCORES(i)
   END DO
   print *, min
   
   threshold_exp = 0.426
   !threshold_pred = 0.0
+  resol = 50
 
   diff_max = max - min
-  diff_min = diff_max / 10
-  !thershold_pred = 
-  !print *, diff_max, diff_min
+  diff_min = diff_max / resol
+  threshold_pred = min 
+  print *, max, min
+  print *, diff_max, diff_min
 
-  DO i = 1, 10!0
+  DO i = 1, resol
     
-    threshold_pred = diff_min * i
+    threshold_pred = min + (diff_min * i)
     tp = 0 !true positives
     fn = 0 !false negatives
     tn = 0 !true negatives
     fp = 0 !false positives
     DO j = 1, 8424
-      IF (EXP_SCORES(j)<threshold_exp) THEN !below of the experimental threshold is negative
-        IF (PRED_SCORES(j)<threshold_pred) THEN ! negative for predicted
+      IF (EXP_SCORES(j)>threshold_exp) THEN !below of the experimental threshold is negative
+        IF (PRED_SCORES(j)>threshold_pred) THEN ! negative for predicted
           tn = tn + 1
         ELSE ! positive for predicted
           fp = fp + 1
         ENDIF
       ELSE !above or equal of the experimental threshold is positive
-        IF (PRED_SCORES(j)<threshold_pred) THEN ! negative for predicted
+        IF (PRED_SCORES(j)>threshold_pred) THEN ! negative for predicted
           fn = fn + 1
         ELSE ! positive for predicted
           tp = tp + 1
@@ -317,17 +320,21 @@ Program  roc_nsga2_9w
     END DO
     TPR(i) = tp / (tp + fn)
     FPR(i) = fp / (tn + fp)
-    print *, tp, fn, fp, tn, TPR(i), FPR(i), threshold_pred
+    !print *, tp, fn, fp, tn, TPR(i), FPR(i), threshold_pred
+    print *, TPR(i), FPR(i)
     !print *, TPR(i), FPR(i), threshold_pred
   END DO
   
   auc = 0
   diff_1 = 0
-  DO i = 1, 10
-    auc = (FPR(i) - diff_1)*TPR(i) + auc
+  diff_2 = 0
+  DO i = 1, resol
+    !auc = (FPR(i) - diff_1)*TPR(i) + auc !rectangle area
+    auc = (FPR(i) - diff_1)*((TPR(i) + diff_2) / 2) + auc !trapezoid area
     diff_1 = FPR(i)
+    diff_2 = TPR(i)
   END DO
-  print *, auc
+  WRITE (*,*) "AUC = ", auc
   !auc(i) = TPR(i)*FPR(i)
 
   !DO i = 1, 100
@@ -353,14 +360,14 @@ Program  roc_nsga2_9w
     
   !END DO
 
-  !corr = 0.0
-  !mean_x = SUM(EXP_SCORES) / 8424
-  !mean_y = SUM(PRED_SCORES) / 8424
-  !cov = SUM((EXP_SCORES(1:8424) - mean_x) * (PRED_SCORES(1:8424) - mean_y))
-  !var_x = SUM((EXP_SCORES(1:8424) - mean_x) * (EXP_SCORES(1:8424) - mean_x))
-  !var_y = SUM((PRED_SCORES(1:8424) - mean_y) * (PRED_SCORES(1:8424) - mean_y))
-  !corr = (cov / SQRT(var_x)) / SQRT(var_y)
+  corr = 0.0
+  mean_x = SUM(EXP_SCORES) / 8424
+  mean_y = SUM(PRED_SCORES) / 8424
+  cov = SUM((EXP_SCORES(1:8424) - mean_x) * (PRED_SCORES(1:8424) - mean_y))
+  var_x = SUM((EXP_SCORES(1:8424) - mean_x) * (EXP_SCORES(1:8424) - mean_x))
+  var_y = SUM((PRED_SCORES(1:8424) - mean_y) * (PRED_SCORES(1:8424) - mean_y))
+  corr = (cov / SQRT(var_x)) / SQRT(var_y)
 
-  !WRITE (*,*) corr
+  WRITE (*,*) "PCC = ", corr
 
 end program roc_nsga2_9w
